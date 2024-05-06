@@ -1,52 +1,12 @@
+from collections import deque
 from collections.abc import Callable
 
-
-class InvalidValueError(Exception):
-    def __init__(self, message: str):
-        super().__init__(message)
-
-
-class Variable:
-    def __init__(self, domain: set = None) -> None:
-        if domain is None:
-            domain = set()
-
-        self.domain = domain
-        self._value: any = None
-
-    @property
-    def value(self) -> any:
-        return self._value
-
-    @value.setter
-    def value(self, new_value) -> None:
-        if (new_value is not None) and (new_value not in self.domain):
-            raise InvalidValueError(f"{new_value} is not in the domain.")
-
-        self._value = new_value
+from lib.constraint import Constraint, BinaryConstraint
+from lib.error import InvalidValueError, InvalidConstraintError
+from lib.variable import Variable
 
 
-class Constraint:
-    def __init__(self, variables: list[Variable], constraint_func: Callable[..., bool]) -> None:
-        """
-        Initializes a constraint
-
-        :param variables: a list on variables involved in the constraint
-        :param constraint_func: a Callable that will be called with the value of variables if they all have a value,
-        the number of parameters should be equal to the number of variables in the constraint
-        """
-
-        self.variables = variables
-        self._constraint_func = constraint_func
-
-    def __call__(self) -> bool:
-        for variable in self.variables:
-            if variable.value is None:
-                return True
-
-        return self._constraint_func(*[variable.value for variable in self.variables])
-
-class CSP:
+class Csp:
     def __init__(self):
         self._variables: set[Variable] = set()
         self._constraints: set[Constraint] = set()
@@ -60,7 +20,6 @@ class CSP:
 
     def add_constraint(self, constraint: Constraint) -> None:
         self._constraints.add(constraint)
-
         for variable in constraint.variables:
             self._variable_constraints[variable].add(constraint)
 
@@ -76,7 +35,7 @@ class CSP:
             variable.value = value
 
             for constraint in self._variable_constraints[variable]:
-                if not constraint():
+                if not constraint.check():
                     raise InvalidValueError(f"Violation of constraint")
 
             if value is None:
@@ -99,3 +58,40 @@ class CSP:
 
     def is_solved(self) -> bool:
         return len(self._unassigned_variables) == 0
+
+
+class BinaryCsp(Csp):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self._constraints: set[BinaryConstraint] = set()
+        self._variable_constraints: dict[Variable, set[BinaryConstraint]] = {}
+
+    def add_constraint(self, constraint: BinaryConstraint) -> None:
+        super().add_constraint(constraint)
+
+    def apply_ac3(self) -> None:
+        """
+        Applies the AC3 algorithm to the CSP.
+        """
+
+        constraint_queue: deque[tuple[Variable, BinaryConstraint]] = deque()
+
+        for constraint in self._constraints:
+            constraint_queue.append((constraint.variables[0], constraint))
+            constraint_queue.append((constraint.variables[1], constraint))
+
+        while len(constraint_queue) > 0:
+            variable, constraint = constraint_queue.popleft()
+
+            if constraint.revise(variable):
+                for other_constraint in self._variable_constraints[variable]:
+                    other_variable = other_constraint.variables[0]
+                    if other_variable == variable:
+                        other_variable = other_constraint.variables[1]
+
+                    constraint_queue.append((other_variable, other_constraint))
+
+
+
+

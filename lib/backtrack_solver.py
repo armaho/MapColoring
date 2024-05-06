@@ -1,6 +1,6 @@
 import copy
 
-from lib.csp import CSP, Variable, InvalidValueError
+from lib.csp import BinaryCsp, Variable, InvalidValueError, Csp
 
 
 class InconsistentCspError(Exception):
@@ -8,8 +8,8 @@ class InconsistentCspError(Exception):
         super().__init__("Inconsistent CSP")
 
 
-class BacktrackSolver:
-    def __init__(self, csp: CSP):
+class BacktrackCspSolver:
+    def __init__(self, csp: Csp):
         self.csp = copy.deepcopy(csp)  # this property should not be changed after assignment
 
     def solve(self) -> None:
@@ -30,3 +30,16 @@ class BacktrackSolver:
 
         self.csp.assign(variable, None)
         return False
+
+class BacktrackBinaryCspSolver(BacktrackCspSolver):
+    def __init__(self, binary_csp: BinaryCsp, use_ac3=False) -> None:
+        super().__init__(binary_csp)
+
+        self.csp = binary_csp
+        self._use_ac3 = use_ac3
+
+    def solve(self) -> None:
+        if self._use_ac3:
+            self.csp.apply_ac3()
+
+        super().solve()
