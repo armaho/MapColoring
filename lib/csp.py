@@ -1,6 +1,8 @@
 from collections import deque
 from collections.abc import Callable
 
+from sortedcontainers import SortedSet
+
 from lib.constraint import Constraint, BinaryConstraint
 from lib.error import InvalidValueError, InvalidConstraintError
 from lib.variable import Variable
@@ -61,14 +63,53 @@ class Csp:
 
 
 class BinaryCsp(Csp):
-    def __init__(self) -> None:
+    def __init__(self, use_mrv=False) -> None:
         super().__init__()
 
         self._constraints: set[BinaryConstraint] = set()
         self._variable_constraints: dict[Variable, set[BinaryConstraint]] = {}
+        self.use_mrv = use_mrv
+
+        if use_mrv:
+            self._unassigned_variables_sorted_by_mrv: SortedSet[Variable] = SortedSet(key=lambda v: len(v.domain))
+
+    def add_variable(self, variable: Variable) -> None:
+        super().add_variable(variable)
+
+        if self.use_mrv:
+            self._unassigned_variables_sorted_by_mrv.add(variable)
 
     def add_constraint(self, constraint: BinaryConstraint) -> None:
         super().add_constraint(constraint)
+
+    def get_unassigned_variable(self) -> Variable | None:
+        if not self.use_mrv:
+            return super().get_unassigned_variable()
+
+        if len(self._unassigned_variables_sorted_by_mrv) == 0:
+            return None
+
+        return next(iter(self._unassigned_variables_sorted_by_mrv))
+
+    def assign(self, variable: Variable, value: any) -> None:
+        super().assign(variable, value)
+
+        if self.use_mrv:
+            self._unassigned_variables_sorted_by_mrv.discard(variable)
+
+            for constraint in self._variable_constraints[variable]:
+                other_variable = constraint.get_other_variable(variable)
+
+                if (other_variable in self._unassigned_variables_sorted_by_mrv):
+                    self._unassigned_variables_sorted_by_mrv.discard(other_variable)
+
+                    for value in other_variable.original_domain:
+                        if constraint.check(overriding_values={other_variable: value}):
+                            other_variable.domain.add(value)
+                        else:
+                            other_variable.domain.discard(value)
+
+                    self._unassigned_variables_sorted_by_mrv.add(other_variable)
 
     def apply_ac3(self) -> None:
         """

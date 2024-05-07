@@ -16,12 +16,19 @@ class Constraint:
         self.variables = variables
         self._constraint_func = constraint_func
 
-    def check(self) -> bool:
+    def check(self, overriding_values: dict[Variable, any] = None) -> bool:
+        if overriding_values is None:
+            overriding_values = {}
+
         for variable in self.variables:
-            if variable.value is None:
+            if (variable.value is None) and ((variable not in overriding_values) or (overriding_values[variable] is None)):
                 return True
 
-        return self._constraint_func(*[variable.value for variable in self.variables])
+        values = []
+        for variable in self.variables:
+            values.append(variable.value if variable.value is not None else overriding_values[variable])
+
+        return self._constraint_func(*values)
 
 class BinaryConstraint(Constraint):
     def __init__(self, variables: list[Variable], constraint_func: Callable[[any, any], bool]) -> None:
@@ -29,6 +36,9 @@ class BinaryConstraint(Constraint):
             raise ValueError("A binary constraint should have exactly two variables.")
 
         super().__init__(variables, constraint_func)
+
+    def get_other_variable(self, variable: Variable) -> Variable:
+        return self.variables[0] if self.variables[0] != variable else self.variables[1]
 
     def revise(self, variable: Variable) -> bool:
         """

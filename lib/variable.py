@@ -1,13 +1,21 @@
+import copy
+
 from lib.error import InvalidValueError
 
 
 class Variable:
-    def __init__(self, domain: set = None) -> None:
-        if domain is None:
-            domain = set()
+    number_of_created_instances: int = 0
 
+    def __init__(self, domain: set) -> None:
         self.domain = domain
+        self.original_domain = copy.deepcopy(self.domain)  # do not change
         self._value: any = None
+        self.__id = Variable.number_of_created_instances
+
+        Variable.number_of_created_instances += 1
+
+    def __hash__(self) -> int:
+        return hash(self.__id)
 
     @property
     def value(self) -> any:

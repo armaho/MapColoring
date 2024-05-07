@@ -13,6 +13,11 @@ class BacktrackCspSolver:
         self.csp = copy.deepcopy(csp)  # this property should not be changed after assignment
 
     def solve(self) -> None:
+        initial_variable = self.csp.get_unassigned_variable()
+
+        if initial_variable is None:
+            return
+
         if not self._backtrack_solving(self.csp.get_unassigned_variable()):
             raise InconsistentCspError()
 
