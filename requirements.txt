@@ -1,1 +1,5 @@
 sortedcontainers~=2.4.0
+pandas~=2.2.1
+shapely~=2.0.3
+geopandas~=0.14.3
+matplotlib~=3.8.3

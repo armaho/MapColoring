@@ -15,6 +15,10 @@ class Csp:
         self._variable_constraints: dict[Variable, set[Constraint]] = {}
         self._unassigned_variables: set[Variable] = set()
 
+    @property
+    def assignments_number(self):
+        return len(self._variables) - len(self._unassigned_variables)
+
     def add_variable(self, variable: Variable) -> None:
         self._variables.add(variable)
         self._unassigned_variables.add(variable)
@@ -67,6 +71,7 @@ class Csp:
                 return variable
 
         return None
+
 
 
 class BinaryCsp(Csp):
