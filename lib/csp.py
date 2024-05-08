@@ -61,14 +61,22 @@ class Csp:
     def is_solved(self) -> bool:
         return len(self._unassigned_variables) == 0
 
+    def get_variable_used_in_csp(self, original_variable: Variable) -> Variable | None:
+        for variable in self._variables:
+            if variable == original_variable:
+                return variable
+
+        return None
+
 
 class BinaryCsp(Csp):
-    def __init__(self, use_mrv=False) -> None:
+    def __init__(self, use_mrv=False, use_lcv=False) -> None:
         super().__init__()
 
         self._constraints: set[BinaryConstraint] = set()
         self._variable_constraints: dict[Variable, set[BinaryConstraint]] = {}
-        self.use_mrv = use_mrv
+        self._use_mrv = use_mrv
+        self._use_lcv = use_lcv
 
         if use_mrv:
             self._unassigned_variables_sorted_by_mrv: SortedSet[Variable] = SortedSet(key=lambda v: len(v.domain))
@@ -76,14 +84,14 @@ class BinaryCsp(Csp):
     def add_variable(self, variable: Variable) -> None:
         super().add_variable(variable)
 
-        if self.use_mrv:
+        if self._use_mrv:
             self._unassigned_variables_sorted_by_mrv.add(variable)
 
     def add_constraint(self, constraint: BinaryConstraint) -> None:
         super().add_constraint(constraint)
 
     def get_unassigned_variable(self) -> Variable | None:
-        if not self.use_mrv:
+        if not self._use_mrv:
             return super().get_unassigned_variable()
 
         if len(self._unassigned_variables_sorted_by_mrv) == 0:
@@ -91,10 +99,35 @@ class BinaryCsp(Csp):
 
         return next(iter(self._unassigned_variables_sorted_by_mrv))
 
+    def get_values_for_variable(self, variable: Variable) -> list:
+        """
+        Returns a list of values assignable to the given variable
+        """
+
+        def value_key(value: any) -> int:
+            removed_values_cnt = 0
+
+            for constraint in self._variable_constraints[variable]:
+                other_variable = constraint.get_other_variable(variable)
+
+                if other_variable not in self._unassigned_variables:
+                    continue
+
+                for other_value in other_variable.domain:
+                    if not constraint.check(overriding_values={variable: value, other_variable: other_value}):
+                        removed_values_cnt += 1
+
+            return removed_values_cnt
+
+        if not self._use_lcv:
+            return list(variable.domain)
+
+        return sorted(list(variable.domain), key=value_key)
+
     def assign(self, variable: Variable, value: any) -> None:
         super().assign(variable, value)
 
-        if self.use_mrv:
+        if self._use_mrv:
             self._unassigned_variables_sorted_by_mrv.discard(variable)
 
             for constraint in self._variable_constraints[variable]:
@@ -132,7 +165,3 @@ class BinaryCsp(Csp):
                         other_variable = other_constraint.variables[1]
 
                     constraint_queue.append((other_variable, other_constraint))
-
-
-
-

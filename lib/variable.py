@@ -17,6 +17,9 @@ class Variable:
     def __hash__(self) -> int:
         return hash(self.__id)
 
+    def __eq__(self, other) -> bool:
+        return self.__hash__() == other.__hash__()
+
     @property
     def value(self) -> any:
         return self._value

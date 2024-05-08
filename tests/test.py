@@ -102,8 +102,8 @@ class SolverTest(unittest.TestCase):
 
         solver.solve()
 
-        self.assertEqual(len(var1.domain), 1)
-        self.assertEqual(next(iter(var1.domain)), 2)
+        self.assertEqual(len(solver.csp.get_variable_used_in_csp(var1).domain), 1)
+        self.assertEqual(next(iter(solver.csp.get_variable_used_in_csp(var1).domain)), 2)
 
     def test_backtrack_solver_with_mrv(self):
         csp = BinaryCsp(use_mrv=True)
@@ -121,6 +121,23 @@ class SolverTest(unittest.TestCase):
         csp.add_constraint(constraint2)
 
         solver = BacktrackBinaryCspSolver(csp)
+        solver.solve()
+
+        self.assertTrue(solver.csp.is_solved())
+
+    def test_backtrack_solver_with_(self):
+        csp = BinaryCsp(use_lcv=True)
+
+        var1 = Variable(domain={1, 2})
+        var2 = Variable(domain={2})
+        constraint1 = BinaryConstraint(variables=[var1, var2], constraint_func=(lambda x, y: x == y))
+
+        csp.add_variable(var1)
+        csp.add_variable(var2)
+        csp.add_constraint(constraint1)
+
+        solver = BacktrackBinaryCspSolver(csp)
+
         solver.solve()
 
         self.assertTrue(solver.csp.is_solved())
