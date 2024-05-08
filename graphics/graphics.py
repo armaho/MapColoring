@@ -19,7 +19,7 @@ def draw_colored_map(solution: Dict[str, str], gdf: gpd.GeoDataFrame, continent:
     """
     # Filter for the selected continent and assign colors
     selected_continent = gdf[gdf['continent'] == continent].copy()
-    selected_continent['color'] = selected_continent['iso_a3'].apply(lambda x: solution.get(x, 'lightgrey'))
+    selected_continent['color'] = selected_continent['iso_a3'].apply(lambda x: solution.get(x))
     
     fig, ax = plt.subplots(1, figsize=(12, 12))
     selected_continent.plot(ax=ax, color=selected_continent['color'], edgecolor='black')

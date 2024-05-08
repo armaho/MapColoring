@@ -1,5 +1,6 @@
 import random
 from argparse import ArgumentParser, Namespace
+from collections import deque
 
 from graphics.graphics import draw
 from lib.backtrack_solver import BacktrackBinaryCspSolver
@@ -7,6 +8,9 @@ from lib.constraint import BinaryConstraint
 from lib.csp import BinaryCsp
 from lib.variable import Variable
 from maps.map_generator import generate_borders_by_continent
+
+
+not_colored_country_color = 'lightgrey'
 
 
 def parse_arguments() -> Namespace:
@@ -41,6 +45,15 @@ def parse_arguments() -> Namespace:
              "solution"
     )
     parser.add_argument(
+        "-n",
+        "--neighborhood-distance",
+        type=int,
+        default=1,
+        help="The value determines the threshold for neighboring regions' similarity in color, with a default of 1 "
+             "ensuring adjacent regions have distinct colors; increasing it, for instance to 2, extends this "
+             "dissimilarity to the neighbors of neighbors."
+    )
+    parser.add_argument(
         "-c",
         "--number-of-colors",
         type=int,
@@ -49,6 +62,29 @@ def parse_arguments() -> Namespace:
     )
 
     return parser.parse_args()
+
+def get_neighbors(countries: dict[str, list[str]], initial_country: str, max_distance: int) -> set[str]:
+    if initial_country not in countries.keys():
+        return set()
+
+    mark = {country: False for country in countries.keys()}
+    bfs_queue: deque[tuple[str, int]] = deque()
+    neighbors: set[str] = set()
+
+    bfs_queue.append((initial_country, 0))
+    mark[initial_country] = True
+
+    while len(bfs_queue) > 0:
+        country, distance = bfs_queue.popleft()
+
+        if distance < max_distance:
+            for neighbor in countries[country]:
+                if (neighbor in countries.keys()) and (not mark[neighbor]):
+                    bfs_queue.append((neighbor, distance + 1))
+                    mark[neighbor] = True
+                    neighbors.add(neighbor)
+
+    return neighbors
 
 
 def main():
@@ -66,8 +102,8 @@ def main():
         csp.add_variable(variable)
 
     visited_countries = set()
-    for country, neighbors in countries.items():
-        for neighbor in neighbors:
+    for country in countries.keys():
+        for neighbor in get_neighbors(countries, country, int(args.neighborhood_distance)):
             if (neighbor in visited_countries) or (neighbor not in countries.keys()):
                 continue
 
@@ -80,8 +116,15 @@ def main():
 
     solver.solve()
 
-    solution = {country: colors[solver.csp.get_variable_used_in_csp(variable).value]
-                for variable, country in variable_country.items()}
+    solution: dict[str, any] = {}
+    for variable, country in variable_country.items():
+        csp_variable = solver.csp.get_variable_used_in_csp(variable)
+
+        if csp_variable.value is not None:
+            solution[country] = colors[csp_variable.value]
+        else:
+            solution[country] = not_colored_country_color
+
     draw(solution=solution, continent=str(args.map), assignments_number=solver.csp.assignments_number)
 
 
