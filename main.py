@@ -1,4 +1,5 @@
 import random
+import time
 from argparse import ArgumentParser, Namespace
 from collections import deque
 
@@ -114,11 +115,17 @@ def main():
 
     solver = BacktrackBinaryCspSolver(csp, use_ac3=args.arc_consistency)
 
+    start_time = time.time()
+
     try:
         solver.solve()
         print("Solved CSP!")
     except InconsistentCspError as ice:
         print(str(ice))
+
+    end_time = time.time()
+
+    print(f"Time taken to solve: {end_time - start_time}")
 
     solution: dict[str, any] = {}
     for variable, country in variable_country.items():
