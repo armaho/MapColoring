@@ -133,7 +133,10 @@ class BinaryCsp(Csp):
         super().assign(variable, value)
 
         if self._use_mrv:
-            self._unassigned_variables_sorted_by_mrv.discard(variable)
+            if value is not None:
+                self._unassigned_variables_sorted_by_mrv.discard(variable)
+            else:
+                self._unassigned_variables_sorted_by_mrv.add(variable)
 
             for constraint in self._variable_constraints[variable]:
                 other_variable = constraint.get_other_variable(variable)

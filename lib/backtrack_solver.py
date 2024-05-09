@@ -57,7 +57,7 @@ class BacktrackBinaryCspSolver(CspSolver):
         if initial_variable is None:
             return
 
-        if not self._backtrack_solving(self.csp.get_unassigned_variable()):
+        if not self._backtrack_solving(initial_variable):
             raise InconsistentCspError()
 
     def _backtrack_solving(self, variable: Variable) -> bool:

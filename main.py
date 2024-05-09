@@ -3,7 +3,7 @@ from argparse import ArgumentParser, Namespace
 from collections import deque
 
 from graphics.graphics import draw
-from lib.backtrack_solver import BacktrackBinaryCspSolver
+from lib.backtrack_solver import BacktrackBinaryCspSolver, InconsistentCspError
 from lib.constraint import BinaryConstraint
 from lib.csp import BinaryCsp
 from lib.variable import Variable
@@ -114,7 +114,11 @@ def main():
 
     solver = BacktrackBinaryCspSolver(csp, use_ac3=args.arc_consistency)
 
-    solver.solve()
+    try:
+        solver.solve()
+        print("Solved CSP!")
+    except InconsistentCspError as ice:
+        print(str(ice))
 
     solution: dict[str, any] = {}
     for variable, country in variable_country.items():
