@@ -139,7 +139,7 @@ class BinaryCsp(Csp):
 
         return next(iter(self._unassigned_variables_sorted_by_mrv))
 
-    def get_values_for_variable(self, variable: Variable) -> list:
+    def get_values_for_variable(self, variable: Variable) -> list | set:
         """
         Returns a list of values assignable to the given variable
         """
@@ -160,7 +160,7 @@ class BinaryCsp(Csp):
             return removed_values_cnt
 
         if not self._use_lcv:
-            return list(variable.domain)
+            return variable.domain
 
         return sorted(list(variable.domain), key=value_key)
 

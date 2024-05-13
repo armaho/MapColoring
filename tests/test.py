@@ -120,6 +120,8 @@ class SolverTest(unittest.TestCase):
         csp.add_constraint(constraint1)
         csp.add_constraint(constraint2)
 
+        csp.adding_completed()
+
         solver = BacktrackBinaryCspSolver(csp)
         solver.solve()
 
