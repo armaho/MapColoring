@@ -9,11 +9,16 @@ from lib.variable import Variable
 
 
 class Csp:
-    def __init__(self):
+    def __init__(self, use_degree_heuristic=False):
         self._variables: set[Variable] = set()
         self._constraints: set[Constraint] = set()
         self._variable_constraints: dict[Variable, set[Constraint]] = {}
         self._unassigned_variables: set[Variable] = set()
+        self._use_degree_heuristic = use_degree_heuristic
+
+        if use_degree_heuristic:
+            self._variables_sorted_by_degree_heuristic: list[Variable] = []
+            self._degree_heuristic_idx = 0
 
     @property
     def assignments_number(self):
@@ -24,10 +29,18 @@ class Csp:
         self._unassigned_variables.add(variable)
         self._variable_constraints[variable] = set()
 
+        if self._use_degree_heuristic:
+            self._variables_sorted_by_degree_heuristic.append(variable)
+
     def add_constraint(self, constraint: Constraint) -> None:
         self._constraints.add(constraint)
         for variable in constraint.variables:
             self._variable_constraints[variable].add(constraint)
+
+    def adding_completed(self) -> None:
+        if (self._use_degree_heuristic):
+            self._variables_sorted_by_degree_heuristic = sorted(self._variables_sorted_by_degree_heuristic, reverse=True
+                                                                , key=lambda v: len(self._variable_constraints[v]))
 
     def assign(self, variable: Variable, value: any) -> None:
         """
@@ -46,6 +59,9 @@ class Csp:
 
             if value is None:
                 self._unassigned_variables.add(variable)
+
+                if self._use_degree_heuristic:
+                    self._degree_heuristic_idx -= 1
             else:
                 self._unassigned_variables.discard(variable)
         except InvalidValueError as ive:
@@ -60,7 +76,15 @@ class Csp:
         if (len(self._unassigned_variables) == 0):
             return None
 
-        return next(iter(self._unassigned_variables))
+        if not self._use_degree_heuristic:
+            return next(iter(self._unassigned_variables))
+
+        if self._degree_heuristic_idx == len(self._variables_sorted_by_degree_heuristic):
+            return None
+
+        variable = self._variables_sorted_by_degree_heuristic[self._degree_heuristic_idx]
+        self._degree_heuristic_idx += 1
+        return variable
 
     def is_solved(self) -> bool:
         return len(self._unassigned_variables) == 0
@@ -73,10 +97,9 @@ class Csp:
         return None
 
 
-
 class BinaryCsp(Csp):
-    def __init__(self, use_mrv=False, use_lcv=False) -> None:
-        super().__init__()
+    def __init__(self, use_mrv=False, use_lcv=False, use_degree_heuristic=False) -> None:
+        super().__init__(use_degree_heuristic)
 
         self._constraints: set[BinaryConstraint] = set()
         self._variable_constraints: dict[Variable, set[BinaryConstraint]] = {}
@@ -85,6 +108,7 @@ class BinaryCsp(Csp):
 
         if use_mrv:
             self._unassigned_variables_sorted_by_mrv: SortedSet[Variable] = SortedSet(key=lambda v: len(v.domain))
+            self._removed_values: dict[Variable, dict[Variable, set[any]]] = dict()
 
     def add_variable(self, variable: Variable) -> None:
         super().add_variable(variable)
@@ -94,6 +118,17 @@ class BinaryCsp(Csp):
 
     def add_constraint(self, constraint: BinaryConstraint) -> None:
         super().add_constraint(constraint)
+
+    def adding_completed(self) -> None:
+        super().adding_completed()
+
+        if self._use_mrv:
+            for variable in self._variables:
+                self._removed_values[variable] = dict()
+
+                for constraint in self._variable_constraints[variable]:
+                    other_variable = constraint.get_other_variable(variable)
+                    self._removed_values[variable][other_variable] = set()
 
     def get_unassigned_variable(self) -> Variable | None:
         if not self._use_mrv:
@@ -144,11 +179,20 @@ class BinaryCsp(Csp):
                 if (other_variable in self._unassigned_variables_sorted_by_mrv):
                     self._unassigned_variables_sorted_by_mrv.discard(other_variable)
 
-                    for value in other_variable.original_domain:
-                        if constraint.check(overriding_values={other_variable: value}):
-                            other_variable.domain.add(value)
-                        else:
-                            other_variable.domain.discard(value)
+                    for value in self._removed_values[variable][other_variable]:
+                        other_variable.domain.add(value)
+
+                    self._removed_values[variable][other_variable] = set()
+
+                    removed_values = []
+
+                    for value in other_variable.domain:
+                        if not constraint.check(overriding_values={other_variable: value}):
+                            removed_values.append(value)
+                            self._removed_values[variable][other_variable].add(value)
+
+                    for value in removed_values:
+                        other_variable.domain.discard(value)
 
                     self._unassigned_variables_sorted_by_mrv.add(other_variable)
 

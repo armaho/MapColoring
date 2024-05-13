@@ -125,7 +125,7 @@ class SolverTest(unittest.TestCase):
 
         self.assertTrue(solver.csp.is_solved())
 
-    def test_backtrack_solver_with_(self):
+    def test_backtrack_solver_with_lcv(self):
         csp = BinaryCsp(use_lcv=True)
 
         var1 = Variable(domain={1, 2})

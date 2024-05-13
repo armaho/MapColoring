@@ -39,6 +39,12 @@ def parse_arguments() -> Namespace:
         help="Enable minimum remaining values (MRV) as a order-type optimizer"
     )
     parser.add_argument(
+        "-dh",
+        "--degree-heuristic",
+        action="store_true",
+        help="Enables degree heuristic"
+    )
+    parser.add_argument(
         "-ac3",
         "--arc-consistency",
         action="store_true",
@@ -93,7 +99,7 @@ def main():
 
     colors = ["#{:06x}".format(random.randint(0x0F0F0F, 0xF0F0F0)) for _ in range(int(args.number_of_colors))]
 
-    csp = BinaryCsp(use_mrv=args.mrv, use_lcv=args.lcv)
+    csp = BinaryCsp(use_mrv=args.mrv, use_lcv=args.lcv, use_degree_heuristic=args.degree_heuristic)
 
     countries = generate_borders_by_continent(continent=str(args.map))
     country_variable = {country: Variable({i for i in range(len(colors))}) for country in countries.keys()}
@@ -113,6 +119,8 @@ def main():
 
         visited_countries.add(country)
 
+    csp.adding_completed()
+
     solver = BacktrackBinaryCspSolver(csp, use_ac3=args.arc_consistency)
 
     start_time = time.time()
@@ -125,7 +133,9 @@ def main():
 
     end_time = time.time()
 
-    print(f"Time taken to solve: {end_time - start_time}")
+    print("Time taken:", end_time - start_time)
+    print("Number of failures:", solver.number_of_failures)
+    print("Average failure depth: ", solver.average_failure_depth)
 
     solution: dict[str, any] = {}
     for variable, country in variable_country.items():
